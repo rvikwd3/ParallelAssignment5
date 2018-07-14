@@ -1,5 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 int main(int argc, char** argv){
     MPI_Init(NULL, NULL);
@@ -7,26 +9,36 @@ int main(int argc, char** argv){
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
+    if(world_size != 2){
+        fprintf(stderr, "Must use 2 processes only");
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
     
-    int token;
-
-    //Receive token from lower rank
-    if(world_rank != 0){
-        MPI_Recv(&token, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        printf("P%d:\tToken (%d) received from P%d\n", world_rank, token, world_rank - 1);
-    }else{  
-        token = -1; //If P0 then set token
-    }
-
-    //Send token to higher rank process
-    MPI_Send(&token, 1, MPI_INT, (world_rank + 1)%world_size, 0, MPI_COMM_WORLD);
-    printf("P%d:\tToken (%d) sent to P%d\n", world_rank, token, (world_rank + 1)%world_size);
+    const int MAX_NUMBERS = 100;
+    int numbers[MAX_NUMBERS];
+    int number_amount;
 
     if(world_rank == 0){
-        MPI_Recv(&token, 1, MPI_INT, world_size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        printf("P0 received token from last Process P%d\n", world_size - 1);
+        //Pick random amount of integers to send to P1
+        srand(time(NULL));
+        number_amount = (rand() / (float)RAND_MAX) * MAX_NUMBERS;
+
+        //Send numbers to P1
+        MPI_Send(&numbers, number_amount, MPI_INT, 1, 5, MPI_COMM_WORLD);
+        printf("P%d:\tSent %d numbers to P1\n", world_rank, number_amount);
+    }else if(world_rank == 1){
+        MPI_Status status;
+
+        //Receive at most MAX_NUMBERS from P0
+        MPI_Recv(&numbers, MAX_NUMBERS, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
+
+        MPI_Get_count(&status, MPI_INT, &number_amount);
+    
+        printf("P%d:\tReceived %d numbers from P0\n", world_rank, number_amount);
+        printf("Source = %d\nTag = %d", status.MPI_SOURCE, status.MPI_TAG);
     }
 
     MPI_Finalize();
