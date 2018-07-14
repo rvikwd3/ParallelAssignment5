@@ -32,13 +32,19 @@ int main(int argc, char** argv){
     }else if(world_rank == 1){
         MPI_Status status;
 
-        //Receive at most MAX_NUMBERS from P0
-        MPI_Recv(&numbers, MAX_NUMBERS, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
-
+        MPI_Probe(0,5,MPI_COMM_WORLD, &status);
         MPI_Get_count(&status, MPI_INT, &number_amount);
+
+        int* number_buffer = (int*)malloc(sizeof(int) * number_amount);
+
+        //Receive at most MAX_NUMBERS from P0
+        MPI_Recv(number_buffer, number_amount, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
+
     
         printf("P%d:\tReceived %d numbers from P0\n", world_rank, number_amount);
         printf("Source = %d\nTag = %d", status.MPI_SOURCE, status.MPI_TAG);
+
+        free(number_buffer);
     }
 
     MPI_Finalize();
