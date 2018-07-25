@@ -14,9 +14,8 @@ Addition of n nodes within p groups
 
 #define N 8
 
-int main(int argc, char** argv){
-
-    srand(time(NULL));
+int main(){
+    printf("Start");
 
     MPI_Init(NULL, NULL);
 
@@ -24,6 +23,7 @@ int main(int argc, char** argv){
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
 
     if(world_size > N){
         fprintf(stderr, "At most use %d processes only", N);
@@ -34,6 +34,8 @@ int main(int argc, char** argv){
 
     if(world_rank == 0){
         //Get random numbers
+        srand(time(NULL));
+
         printf("Randomized Array:\t");
         for(int i=0; i < world_size; i++){
             input_array[i] = rand() % 100;
@@ -48,6 +50,7 @@ int main(int argc, char** argv){
     assert(number_buffer != NULL);
 
     //Scatter number array from P0 to other processes
+
     printf("P%d: Scattered Input Array\n", world_rank);
     MPI_Scatter(input_array, 1, MPI_INT, number_buffer, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -56,6 +59,7 @@ int main(int argc, char** argv){
     free(number_buffer);
 
     MPI_Finalize();
-
+    
     return 0;
+
 }
