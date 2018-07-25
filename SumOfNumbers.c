@@ -24,11 +24,12 @@ int main(){
 
 
     if(world_size > N){
-        fprintf(stderr, "At most use %d processes only", N);
+        if(world_rank==0){ fprintf(stderr, "\nERROR:\tAt most use %d processes only\n", N); }
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     int input_array[world_size];
+    int sum = 0;
 
     if(world_rank == 0){
         //Get random numbers
@@ -44,17 +45,24 @@ int main(){
     }
 
     //Create integer buffer to receive number
-    int *number_buffer = (int*)malloc(sizeof(int));
-    assert(number_buffer != NULL);
+    int *node_data= (int*)malloc(sizeof(int));
+    assert(node_data!= NULL);
 
     //Scatter number array from P0 to other processes
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(world_rank==0){ printf("First barrier reached\n"); }
 
     printf("P%d: Scattered Input Array\n", world_rank);
-    MPI_Scatter(input_array, 1, MPI_INT, number_buffer, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(input_array, 1, MPI_INT, node_data, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    printf("P%d: [%d]\n", world_rank, *number_buffer);
+    //Current process and its data
+    printf("P%d: [%d]\n", world_rank, *node_data);
 
-    free(number_buffer);
+    //LSB complement
+    int bit_complement = world_rank ^ 1UL << 0;
+    printf("P%d: LSB bit complement %d\n", world_rank, bit_complement);
+
+    free(node_data);
 
     MPI_Finalize();
     
