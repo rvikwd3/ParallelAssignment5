@@ -11,6 +11,7 @@ Addition of n nodes within p groups
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <Windows.h>
 
 #define N 8
 
@@ -37,7 +38,7 @@ int main(){
 
     unsigned int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    unsigned int world_rank;
+    int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
 
@@ -47,7 +48,6 @@ int main(){
     }
 
     int input_array[world_size];
-    int sum = 0;
 
     if(world_rank == 0){
         //Get random numbers
@@ -72,27 +72,45 @@ int main(){
 
     //Scatter number array from P0 to other processes
     MPI_Barrier(MPI_COMM_WORLD);
+    Sleep(1000);
     if(world_rank==0){ printf("First barrier reached\n"); }
 
-    printf("P%d: Scattered Input Array\n", world_rank);
     MPI_Scatter(input_array, 1, MPI_INT, node_data, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     //Current process and its data
     printf("P%d: [%d]\n", world_rank, *node_data);
 
+    int sum = *node_data;
+    printf("P%d:\tSum = %d\n", world_rank, sum);
+
     //Ready the receiving buffer
-    unsigned int* recv_buffer = (int*)malloc(sizeof(int));
+    int* recv_buffer = (int*)malloc(sizeof(int));
     assert(recv_buffer != NULL);
 
     for(int i=0; i < binary_digits; i++){
         //LSB complement
         int bit_complement = world_rank ^ 1UL << i;
-        printf("P%d: LSB bit complement %d\n", world_rank, bit_complement);
+        printf("P%d: %d bit complement P%d\n", world_rank, i, bit_complement);
 
-        // MPI_Ssend(node_data, 1, MPI_INT, bit_complement, 0, MPI_COMM_WORLD);
+        MPI_Bsend(&sum, 1, MPI_INT, bit_complement, 0, MPI_COMM_WORLD);
+        printf("P%d: Sent data [%d] -> P%d\n", world_rank, sum, bit_complement);
+        MPI_Recv(&recv_buffer, 1, MPI_INT, bit_complement, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        printf("P%d: Recv data [%d] <- P%d\n", world_rank, recv_buffer, bit_complement);
 
+        sum += (int)recv_buffer;
+        printf("P%d [i=%d]:\tSum = %d\n", world_rank, i, sum);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        Sleep(100);
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    Sleep(100);
+
+    printf("\nP%d:\tSum = %d\n", world_rank, sum);
+
     free(node_data);
+    free(recv_buffer);
 
     MPI_Finalize();
     
