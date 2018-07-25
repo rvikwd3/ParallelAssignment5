@@ -6,17 +6,15 @@ Addition of n nodes within p groups
 20180724
 */
 
-#include <mpi.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <mpi.h>
 #include <time.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #define N 8
 
 int main(){
-    printf("Start");
-
     MPI_Init(NULL, NULL);
 
     int world_size;
